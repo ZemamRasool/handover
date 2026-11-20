@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Handover — Security</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="wrap narrow">
+    <header class="top"><a class="logo" href="/">Handover</a><a class="btn btn-ghost" href="/app">Log in</a></header>
+    <article class="prose">
+      <h1>Security summary</h1>
+      <p class="muted">One page for your IT and legal team. Version 2026-11-06.</p>
+      <h2>Consent first</h2>
+      <p>Nothing is collected from a leaving employee until they read exactly what is collected and sign, typing their full name. Each signature and withdrawal is kept as a record that is never changed. Withdrawing deletes everything they shared. We only work on material the employee chooses to share. No monitoring, no inbox access, no imitation of the person.</p>
+      <h2>Your data is kept apart from other companies</h2>
+      <p>Every record carries your organisation's ID, and every database query filters by it, including the search that finds sources for answers. Automated tests prove that one organisation cannot see, search, export or delete another's data.</p>
+      <h2>Who can see what</h2>
+      <ul>
+        <li><b>Admins:</b> add leaving employees, invite the team, see transcripts, delete knowledge, export data.</li>
+        <li><b>Readers:</b> ask questions and read cited sources.</li>
+        <li><b>Leaving employees:</b> only their own consent, interview and documents.</li>
+      </ul>
+      <h2>Encryption and storage</h2>
+      <ul>
+        <li>All traffic uses HTTPS (HSTS on).</li>
+        <li>Uploaded files are encrypted at rest with AES-256-GCM. Google Drive access tokens are encrypted too.</li>
+        <li>Passwords are never stored. Login is handled by Google Firebase (email link or Google sign-in).</li>
+        <li>Data is hosted in the region you choose. Ask us for the current list.</li>
+      </ul>
+      <h2>Answers you can check</h2>
+      <p>Every answer shows the interview answer or document it came from. If nothing relevant is found, Handover says "I don't know" instead of guessing. People can mark wrong answers, and admins review them.</p>
+      <h2>Audit, deletion and export</h2>
+      <ul>
+        <li>Every sign-in, consent, upload, question, transcript view, deletion and export is logged with who, when and from where.</li>
+        <li>Admins can delete one person's knowledge, export everything as one file, or delete the whole organisation.</li>
+      </ul>
+      <h2>AI providers</h2>
+      <p>We use Anthropic (interview follow-ups and answers) and Voyage AI (search fingerprints) through their business APIs, which do not train on your data. Only the passages needed to answer a question are sent.</p>
+      <h2>Application security</h2>
+      <p>Strict content security policy, protection against framing, rate limits, uploads checked by their real content, server-side checks on every permission, and automatic refusal of unsafe production settings.</p>
+      <h2>Contact</h2>
+      <p>security@handover.example</p>
+    </article>
+    <footer class="foot"><a href="/">Home</a> · <a href="/security">Security</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,247 @@
+// Handover database schema. Tables follow SPEC.md "Data model".
+// EVERY table that holds company data carries org_id, and every query filters by it.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  // "per_departure" ($299 each, SPEC.md) or "subscription"
+  plan      String   @default("per_departure")
+  // Where the customer wants data kept (SPEC.md: "hosting region that matches the customer's data rules")
+  dataRegion String  @default("eu") @map("data_region")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users     User[]
+  people    DepartingPerson[]
+  sources   Source[]
+  chunks    Chunk[]
+  questions Question[]
+
+  @@map("organizations")
+}
+
+enum Role {
+  admin // runs the account: adds people, invites the team, deletes and exports
+  employee // a leaving employee: sees only their own consent, interview and documents
+  reader // the next hire / team: asks questions
+}
+
+model User {
+  id          String   @id @default(cuid())
+  orgId       String?  @map("org_id")
+  firebaseUid String   @unique @map("firebase_uid")
+  email       String   @unique
+  name        String?
+  role        Role     @default(reader)
+  // Google Drive connection (read-only), encrypted.
+  googleTokenEnc String? @map("google_token_enc")
+  disabled    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  org       Organization?    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  person    DepartingPerson? @relation("personUser")
+  questions Question[]
+
+  @@index([orgId])
+  @@map("users")
+}
+
+enum ConsentStatus {
+  pending // added, has not signed
+  signed // signed: interview and documents allowed
+  withdrawn // took consent back: their knowledge was deleted
+}
+
+enum InterviewStatus {
+  not_started
+  in_progress
+  completed
+}
+
+model DepartingPerson {
+  id              String          @id @default(cuid())
+  orgId           String          @map("org_id")
+  userId          String?         @unique @map("user_id")
+  name            String
+  email           String
+  role            String
+  team            String?
+  lastDay         DateTime?       @map("last_day") @db.Date
+  consentStatus   ConsentStatus   @default(pending) @map("consent_status")
+  interviewStatus InterviewStatus @default(not_started) @map("interview_status")
+  // When the admin deleted this person's knowledge (the person row stays for the audit trail).
+  knowledgeDeletedAt DateTime?    @map("knowledge_deleted_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  org        Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user       User?            @relation("personUser", fields: [userId], references: [id], onDelete: SetNull)
+  consents   ConsentRecord[]
+  interviews InterviewAnswer[]
+  sources    Source[]
+
+  @@index([orgId])
+  @@map("departing_people")
+}
+
+// A signed consent. Never edited: a new version or a withdrawal is a new row.
+model ConsentRecord {
+  id        String   @id @default(cuid())
+  orgId     String   @map("org_id")
+  personId  String   @map("person_id")
+  action    String // "signed" | "withdrawn"
+  scopeText String   @map("scope_text")
+  version   String
+  typedName String   @map("typed_name")
+  ip        String?
+  signedAt  DateTime @default(now()) @map("signed_at")
+
+  person DepartingPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, personId])
+  @@map("consent_records")
+}
+
+enum SourceType {
+  interview
+  upload
+  google_drive
+}
+
+enum SourceStatus {
+  processing
+  ready
+  failed
+}
+
+model Source {
+  id         String       @id @default(cuid())
+  orgId      String       @map("org_id")
+  personId   String       @map("person_id")
+  type       SourceType
+  title      String
+  // Drive link or file name; for an interview answer, the question key.
+  link       String?
+  mimeType   String?      @map("mime_type")
+  // Encrypted original file on disk (uploads), so it can be re-processed or deleted.
+  fileKey    String?      @map("file_key")
+  externalId String?      @map("external_id")
+  status     SourceStatus @default(processing)
+  error      String?
+  ingestedAt DateTime?    @map("ingested_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  org    Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  person DepartingPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+  chunks Chunk[]
+
+  @@index([orgId, personId])
+  @@map("sources")
+}
+
+model Chunk {
+  id           String   @id @default(cuid())
+  orgId        String   @map("org_id")
+  sourceId     String   @map("source_id")
+  position     Int
+  text         String
+  // The "meaning fingerprint" (1024 numbers) used to find related text. Written with raw SQL.
+  embedding    Unsupported("vector(1024)")?
+  // Keyword search column, kept up to date by Postgres (see migration).
+  searchVector Unsupported("tsvector")? @map("search_vector")
+  metadataJson Json?    @map("metadata_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  source Source       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([sourceId])
+  @@map("chunks")
+}
+
+model InterviewAnswer {
+  id          String   @id @default(cuid())
+  orgId       String   @map("org_id")
+  personId    String   @map("person_id")
+  questionKey String   @map("question_key")
+  question    String
+  answer      String?
+  isFollowUp  Boolean  @default(false) @map("is_follow_up")
+  skipped     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  person DepartingPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, personId, createdAt])
+  @@map("interviews")
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  orgId         String   @map("org_id")
+  askerId       String   @map("asker_id")
+  question      String
+  answer        String
+  known         Boolean
+  citationsJson Json     @map("citations_json")
+  usedAi        Boolean  @default(false) @map("used_ai")
+  // 1 = helpful, -1 = wrong or unhelpful
+  rating        Int?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  asker User         @relation(fields: [askerId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+  @@map("questions")
+}
+
+enum JobStatus {
+  queued
+  running
+  done
+  failed
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json
+  status      JobStatus @default(queued)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  runAt       DateTime  @default(now()) @map("run_at")
+  lockedAt    DateTime? @map("locked_at")
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, runAt])
+  @@map("jobs")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  orgId      String?  @map("org_id")
+  actorId    String?  @map("actor_id")
+  actorEmail String?  @map("actor_email")
+  action     String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  ip         String?
+  meta       Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([orgId, createdAt])
+  @@map("audit_logs")
+}

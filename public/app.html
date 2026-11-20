@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Handover</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="wrap wide">
+    <header class="top">
+      <a class="logo" href="/"><span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h9"/><path d="M10 8l4 4-4 4"/><path d="M17 5v14"/></svg></span>Handover</a>
+      <div class="top-right"><span class="muted hide-sm" id="who"></span> <button class="btn btn-ghost hidden" id="logout">Log out</button></div>
+    </header>
+
+    <section class="card login hidden" id="login-view">
+      <h2>Log in</h2>
+      <p class="muted" id="login-hint">We'll email you a sign-in link. No password needed.</p>
+      <form id="login-form" class="stack">
+        <input type="email" name="email" required placeholder="you@company.com" aria-label="Email address" autocomplete="email">
+        <button class="btn btn-primary" type="submit">Continue</button>
+      </form>
+      <button class="btn btn-ghost hidden full" id="google-btn">Continue with Google</button>
+      <div id="login-msg"></div>
+    </section>
+
+    <section class="card login hidden" id="org-view">
+      <h2>Set up your company</h2>
+      <p class="muted">You'll be the admin. You can invite your team next.</p>
+      <form id="org-form" class="stack">
+        <label class="field"><span>Company name</span><input name="name" required maxlength="120"></label>
+        <label class="field"><span>Your name</span><input name="yourName" required maxlength="120"></label>
+        <label class="field"><span>Where should your data be kept?</span><select name="dataRegion"><option value="eu">European Union</option><option value="uk">United Kingdom</option><option value="us">United States</option><option value="asia">Asia</option></select></label>
+        <button class="btn btn-primary" type="submit">Create</button>
+      </form>
+      <div id="org-msg"></div>
+    </section>
+
+    <section class="hidden" id="app-view">
+      <nav class="tabs" id="tabs" role="tablist"></nav>
+      <div id="flash"></div>
+      <div id="panel"></div>
+    </section>
+  </div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
